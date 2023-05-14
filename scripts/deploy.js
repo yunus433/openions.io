@@ -1,21 +1,19 @@
-// We require the Hardhat Runtime Environment explicitly here. This is optional
-// but useful for running the script in a standalone fashion through `node <script>`.
-//
-// You can also run a script with `npx hardhat run <script>`. If you do that, Hardhat
-// will compile your contracts, add the Hardhat Runtime Environment's members to the
-// global scope, and execute the script.
 const path = require("path");
 const fs = require("fs");
 
 async function main() {
   // ethers is available in the global scope
+  const worldIDAddress = await fetch('https://developer.worldcoin.org/api/v1/contracts')
+    .then(res => res.json())
+    .then(res => res.find(({ key }) => key === 'staging.semaphore.wld.eth').value);
+
   const [deployer] = await ethers.getSigners();
   console.log(
     "Deploying the contracts with the account:",
     await deployer.getAddress()
   );
   const CM = await ethers.getContractFactory("Openions");
-  const cm = await CM.deploy(deployer.address);
+  const cm = await CM.deploy(worldIDAddress);
   await cm.deployed();
   saveFrontendFiles(cm);
 }

@@ -8,9 +8,7 @@ contract Openions {
   using ByteHasher for bytes;
 
   /// The World ID instance that will be used for verifying proofs
-  IWorldID internal immutable worldId;
-  /// The contract's external nullifier hash
-  uint256 internal immutable externalNullifier;
+  IWorldID internal immutable appId;
   /// The World ID group ID (always 1)
   uint256 internal immutable groupId = 1;
 
@@ -43,18 +41,11 @@ contract Openions {
   mapping(uint256 => mapping(uint => uint64)) choiceVoteCounts; // Number of votes on each choice index
   mapping(uint256 => mapping(uint256 => bool)) hasVoted; // Information if a person has voted before or not, kept with WorldIdNullfier
 
-  event newVote(uint256 id, string name); // Emit newVote event to count votes on frontend asynchronously
-
-  // Contruct the contract with WorldID contracts
+  // Contruct the contract with appId contracts
   constructor(
-    IWorldID _worldId, // The WorldID instance that will verify the proofs
-    string memory _appId, // The World ID app ID
-    string memory _actionId // The World ID action ID
+    IWorldID _worldId // The appId instance that will verify the proofs
   ) {
-    worldId = _worldId;
-    externalNullifier = abi
-      .encodePacked(abi.encodePacked(_appId).hashToField(), _actionId)
-      .hashToField();
+    appId = _worldId;
   } 
 
   // Verify the sender is a human and create a new poll
@@ -65,21 +56,22 @@ contract Openions {
     address signal, // An arbitrary input from the user, usually the user's wallet address (check README for further details)
     uint256 root, // The root of the Merkle tree (returned by the JS widget).
     uint256 nullifierHash, // The nullifier hash for this proof, preventing double signaling (returned by the JS widget).
-    uint256[8] calldata proof // The zero-knowledge proof that demonstrates the claimer is registered with World ID (returned by the JS widget).
-  ) public returns (uint256) {
-    uint256 uniquePollId = uint256(block.timestamp) + uint256(uint160(msg.sender)); // Generate a unique poll id using block timestamp and sender wallot address
+    string calldata _proof // The zero-knowledge proof that demonstrates the claimer is registered with World ID (returned by the JS widget).
+  ) public {
+    uint256 uniquePollId = nullifierHash;
     uint8 userPollCount = pollCount[msg.sender]; // Get this users poll count
+    uint256[8] memory proof = abi.decode(bytes(_proof), (uint256[8]));
 
     if (userPollCount >= MAX_POLL_COUNT_PER_WALLOT) // A person may have at most `MAX_POLL_COUNT_PER_WALLOT` polls
       revert MaxPollCountReached(MAX_POLL_COUNT_PER_WALLOT);
 
     // Verify the provided proof is valid and the user is verified by World ID
-    worldId.verifyProof(
+    appId.verifyProof(
       root,
       groupId,
       abi.encodePacked(signal).hashToField(),
       nullifierHash,
-      externalNullifier,
+      abi.encodePacked(appId).hashToField(),
       proof
     );
 
@@ -97,9 +89,25 @@ contract Openions {
 
     pollCount[msg.sender]++;
     totalPollCount++;
-
-    return uniquePollId;
   }
+
+  function viewPollQuestion(
+    uint256 id
+  ) public view returns(string memory) {
+		return polls[id].question;
+	}
+
+  function viewPollChoices(
+    uint256 id
+  ) public view returns(string[] memory) {
+    string[] memory choices = new string[](polls[id].choiceCount);
+
+    for (uint i = 0; i < polls[id].choiceCount; i++) {
+      choices[i] = choiceNames[id][i];
+    }
+
+		return choices;
+	}
 
   // End the poll. Noone can vote once the poll has ended
   function endPoll(
@@ -129,18 +137,16 @@ contract Openions {
       revert ChoiceOutOfRange(polls[id].choiceCount);
 
     // Verify the provided proof is valid and the user is verified by World ID
-    worldId.verifyProof(
+    appId.verifyProof(
       root,
       groupId,
       abi.encodePacked(signal).hashToField(),
       nullifierHash,
-      externalNullifier,
+      abi.encodePacked(appId).hashToField(),
       proof
     );
 
     hasVoted[id][nullifierHash] = true;
     choiceVoteCounts[id][choice]++;
-
-    emit newVote(id, choiceNames[id][choice]);
   }
 }
