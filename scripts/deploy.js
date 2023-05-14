@@ -14,7 +14,7 @@ async function main() {
     "Deploying the contracts with the account:",
     await deployer.getAddress()
   );
-  const CM = await ethers.getContractFactory("AnonyPoll");
+  const CM = await ethers.getContractFactory("Openions");
   const cm = await CM.deploy(deployer.address);
   await cm.deployed();
   saveFrontendFiles(cm);
@@ -30,7 +30,7 @@ function saveFrontendFiles(cm) {
     JSON.stringify({ CM: cm.address }, null, 2)
   );
   // `artifacts` is a helper property provided by Hardhat to read artifacts
-  const CMArtifact = artifacts.readArtifactSync("AnonyPoll");
+  const CMArtifact = artifacts.readArtifactSync("Openions");
   fs.writeFileSync(
     contractsDir + "/CM.json",
     JSON.stringify(CMArtifact, null, 2)

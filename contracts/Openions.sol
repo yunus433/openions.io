@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import { ByteHasher } from "./helpers/ByteHasher.sol";
 import { IWorldID } from "./interfaces/IWorldID.sol";
 
-contract AnonyPoll {
+contract Openions {
   using ByteHasher for bytes;
 
   /// The World ID instance that will be used for verifying proofs
