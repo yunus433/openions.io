@@ -15,6 +15,7 @@ async function main() {
   const CM = await ethers.getContractFactory("Openions");
   const cm = await CM.deploy(worldIDAddress);
   await cm.deployed();
+  console.log(cm);
   saveFrontendFiles(cm);
 }
 // we add this part to save artifacts and address
